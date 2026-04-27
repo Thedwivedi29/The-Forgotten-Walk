@@ -85,11 +85,20 @@ $(document).ready(function () {
 		);
 
 		requestAnimationFrame(() => {
+			// Move standard objects
 			$(".obstacle, .bush, .floor, .object, #finishLine").each(function () {
+				const isTree = $(this).hasClass("tree");
+				let speedFactor = 1;
+				
+				// Parallax effect for trees
+				if (isTree) {
+					const index = $(this).index(".tree");
+					speedFactor = 0.5 + (index * 0.1); // Closer trees move faster
+				}
+
 				const left = parseInt($(this).css("left"));
-				$(this).css("left", left - scrollDirection * scrollSpeed + "px");
+				$(this).css("left", left - (scrollDirection * scrollSpeed * speedFactor) + "px");
 			});
-			checkWin();
 			checkHeroSilhouetteOverlap();
 		});
 	}
@@ -112,6 +121,17 @@ $(document).ready(function () {
 			handleScroll(scrollDirection);
 		}
 	});
+
+	// Main game loop for continuous updates
+	function gameLoop() {
+		if (!gameRunning) return;
+		
+		checkCollision();
+		checkWin();
+		
+		requestAnimationFrame(gameLoop);
+	}
+	requestAnimationFrame(gameLoop);
 
 	$(document).on("touchstart", function (e) {
 		touchStartX = e.originalEvent.touches[0].pageX;
@@ -198,7 +218,7 @@ $(document).ready(function () {
 
 	function checkCollision() {
 		if (!gameRunning) return;
-		const tolerance = 10;
+		const tolerance = 15; // Adjusted for better feel
 		const heroPos = hero[0].getBoundingClientRect();
 
 		$(".obstacle").each(function () {
@@ -207,8 +227,8 @@ $(document).ready(function () {
 				!(
 					heroPos.right < obstaclePos.left + tolerance ||
 					heroPos.left > obstaclePos.right - tolerance ||
-					heroPos.bottom < obstaclePos.top ||
-					heroPos.top > obstaclePos.bottom
+					heroPos.bottom < obstaclePos.top + tolerance ||
+					heroPos.top > obstaclePos.bottom - tolerance
 				)
 			) {
 				gameOver();
@@ -216,7 +236,7 @@ $(document).ready(function () {
 		});
 	}
 
-	setInterval(checkCollision, 100);
+	// Removed setInterval(checkCollision, 100) - now handled in gameLoop
 
 	function checkWin() {
 		const heroPos = hero[0].getBoundingClientRect();
